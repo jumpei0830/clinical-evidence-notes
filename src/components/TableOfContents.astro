@@ -1,0 +1,51 @@
+---
+export interface TocHeading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: TocHeading[];
+  variant: 'mobile' | 'desktop';
+}
+
+const { headings, variant } = Astro.props;
+const visibleHeadings = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+
+{
+  visibleHeadings.length > 0 && variant === 'mobile' && (
+    <details class="toc-mobile">
+      <summary>記事内目次（{visibleHeadings.length}項目）</summary>
+      <nav aria-label="記事内目次（モバイル）">
+        <ul class="toc-list">
+          {visibleHeadings.map((h) => (
+            <li class={`toc-item depth-${h.depth}`}>
+              <a href={`#${h.slug}`}>{h.text}</a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </details>
+  )
+}
+
+{
+  visibleHeadings.length > 0 && variant === 'desktop' && (
+    <aside class="toc-sidebar" aria-label="記事内目次">
+      <p class="toc-title">On this page / 目次</p>
+      <nav>
+        <ul class="toc-list" id="desktop-toc-list">
+          {visibleHeadings.map((h) => (
+            <li class={`toc-item depth-${h.depth}`}>
+              <a href={`#${h.slug}`} data-toc-target={h.slug}>
+                {h.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </aside>
+  )
+}

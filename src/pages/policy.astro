@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_CONFIG } from '../config/site';
+---
+
+<BaseLayout
+  title="編集方針・著作権配慮・医療免責事項"
+  description={`${SITE_CONFIG.name} の編集方針、一次文献の引用と著作権配慮、および医療免責事項について記載しています。`}
+  currentPath="/policy"
+>
+  <div class="container">
+    <div class="policy-container">
+      <div class="policy-card">
+        <header class="policy-header">
+          <h1>編集方針・著作権配慮・医療免責事項</h1>
+          <p>
+            本サイト（{SITE_CONFIG.name}）における科学的妥当性の担保、著作権およびプライバシーへの配慮、ならびに利用上の免責事項を定めています。
+          </p>
+        </header>
+
+        <div class="prose">
+          <h2 id="editorial-policy">1. 編集方針（Editorial Policy）</h2>
+          <ul>
+            <li>
+              <strong>一次文献・ガイドラインに基づく構成</strong>：本サイトの記事は、査読付き学術論文（原著論文、システマティックレビュー・メタアナリシス等）および学会公式診療ガイドラインに基づき、疫学・病態生理・神経画像所見・評価指標・臨床エビデンスを構造化して整理しています。
+            </li>
+            <li>
+              <strong>出典の明示（バンクーバー方式）</strong>：数値、カットオフ値、病態記述、画像所見、推奨グレード等には、原則として本文中の参照番号（例：<code>[1]</code>）と末尾の参考文献リスト（PubMed / DOI リンク付き）を1対1で紐づけています。
+            </li>
+            <li>
+              <strong>未検証情報の明示と推測の排除</strong>：一次文献の確認が完了していない項目については、根拠のない推測や補完を行わず、<strong>「要一次文献確認」</strong>と明示します。
+            </li>
+            <li>
+              <strong>確立された知見と考察の分離</strong>：先行研究により支持される事実・エビデンスと、臨床・作業療法への示唆および今後の検証課題は、セクションおよび表現上明確に区別して記載します。
+            </li>
+            <li>
+              <strong>個人情報・臨床データの保護</strong>：特定の個人を識別し得る情報や未匿名化の臨床データは一切掲載しません。
+            </li>
+          </ul>
+
+          <h2 id="copyright-policy">2. 著作権・引用配慮方針（Copyright &amp; Citation Policy）</h2>
+          <ul>
+            <li>
+              <strong>図表・原文の無断転載禁止</strong>：学術論文やガイドラインに掲載された図表、画像、および長文の原文を無断転載することはありません。
+            </li>
+            <li>
+              <strong>構造化要約と原典への誘導</strong>：各研究やガイドラインの要点は独自の構造化要約・比較整理として提示し、必ず一次文献の書誌情報および DOI / PubMed 等の公式リンクから原典を参照できる形をとっています。
+            </li>
+            <li>
+              <strong>評価尺度の取り扱い</strong>：認知機能検査等の評価尺度については、版権・使用許諾に配慮し、検査用紙や設問内容の転載は行わず、特性・評価ドメイン・先行研究における診断精度等の学術的情報のみを整理します。
+            </li>
+          </ul>
+
+          <h2 id="medical-disclaimer">3. 医療免責事項（Medical Disclaimer）</h2>
+          <ul>
+            <li>
+              <strong>情報提供・学術参照目的</strong>：本サイトの内容は、論文執筆・臨床研究・医療専門職の学習および教育の補助を目的とした一般的な学術リファレンスであり、個別の患者に対する診断・治療・リハビリテーション処方等の医学的助言を提供するものではありません。
+            </li>
+            <li>
+              <strong>原典・最新ガイドライン・主治医判断の優先</strong>：医学的知見や診療ガイドラインは随時更新されます。実際の臨床判断においては、必ず原典論文、最新の公式診療ガイドライン、添付文書、および主治医・担当医療チームの専門的判断を最優先してください。
+            </li>
+            <li>
+              <strong>免責</strong>：本サイトの記載内容の正確性・最新性の維持に努めていますが、完全性を保証するものではありません。本サイトの利用によって生じたいかなる損害についても、運営者は一切の責任を負いかねます。
+            </li>
+          </ul>
+        </div>
+
+        <div class="article-bottom-nav">
+          <a href="/" class="back-link">
+            <span aria-hidden="true">&larr;</span> 記事一覧へ戻る
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

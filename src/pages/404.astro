@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="ページが見つかりません">
+  <div class="container">
+    <div class="policy-container">
+      <div class="policy-card" style="text-align: center; padding: 48px 24px;">
+        <p class="hero-eyebrow">404 Not Found</p>
+        <h1 style="margin: 0 0 12px; font-size: 1.6rem;">お探しのページが見つかりませんでした</h1>
+        <p style="margin: 0 0 24px; color: var(--text-secondary);">
+          URL が変更されたか、記事が移動・削除された可能性があります。
+        </p>
+        <a href="/" class="back-link">&larr; 記事一覧へ戻る</a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

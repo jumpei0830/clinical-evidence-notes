@@ -1,0 +1,147 @@
+---
+export interface ReferenceItem {
+  id: number;
+  citation: string;
+  doi?: string;
+  pmid?: string;
+  url?: string;
+  note?: string;
+}
+
+interface Props {
+  references: ReferenceItem[];
+  sectionNumber?: number;
+}
+
+const { references, sectionNumber } = Astro.props;
+const sortedRefs = [...references].sort((a, b) => a.id - b.id);
+const headingText = sectionNumber
+  ? `${sectionNumber}. 参考文献（References）`
+  : '参考文献（References）';
+
+function formatCopyText(ref: ReferenceItem): string {
+  const parts = [`[${ref.id}] ${ref.citation}`];
+  if (ref.doi) parts.push(`doi:${ref.doi}`);
+  if (ref.pmid) parts.push(`PMID:${ref.pmid}`);
+  if (!ref.doi && !ref.pmid && ref.url) parts.push(ref.url);
+  return parts.join(' ');
+}
+
+const allCopyText = sortedRefs.map((ref) => formatCopyText(ref)).join('\n');
+---
+
+<section id="references" class="references-section" aria-labelledby="references-heading">
+  <div class="references-header">
+    <h2 id="references-heading" class="references-heading">{headingText}</h2>
+    {
+      sortedRefs.length > 0 && (
+        <button
+          type="button"
+          class="copy-all-btn"
+          id="copy-all-refs-btn"
+          data-copy-text={allCopyText}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          <span class="btn-label">全文献をまとめてコピー</span>
+        </button>
+      )
+    }
+  </div>
+
+  {
+    sortedRefs.length === 0 ? (
+      <div class="references-empty">
+        一次文献は現在整備中です（本文中の <span class="verify-badge">要一次文献確認</span> 箇所とあわせて確認後に追記されます）。
+      </div>
+    ) : (
+      <ol class="references-list">
+        {sortedRefs.map((ref) => {
+          const cleanDoi = ref.doi?.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').trim() || '';
+          const cleanPmid = ref.pmid?.replace(/^pmid:\s*/i, '').trim() || '';
+          const doiHref = cleanDoi ? `https://doi.org/${cleanDoi}` : '';
+          const pmidHref = cleanPmid ? `https://pubmed.ncbi.nlm.nih.gov/${cleanPmid}/` : '';
+          const copyText = formatCopyText(ref);
+
+          return (
+            <li id={`ref-${ref.id}`} class="reference-item">
+              <span class="reference-num">[{ref.id}]</span>
+              <div class="reference-body">
+                <p class="reference-citation">
+                  {ref.citation}
+                  {ref.note && (
+                    <>
+                      {' '}
+                      <span class="verify-badge">{ref.note}</span>
+                    </>
+                  )}
+                </p>
+                <div class="reference-actions">
+                  {pmidHref && (
+                    <a
+                      href={pmidHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="ref-link-btn"
+                    >
+                      PubMed: {cleanPmid}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  )}
+                  {doiHref && (
+                    <a
+                      href={doiHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="ref-link-btn"
+                    >
+                      DOI: {cleanDoi}
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  )}
+                  {ref.url && (
+                    <a
+                      href={ref.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="ref-link-btn"
+                    >
+                      原典リンク
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    class="ref-copy-btn"
+                    data-copy-text={copyText}
+                    aria-label={`参考文献 ${ref.id} の引用テキストをコピー`}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    <span class="btn-label">引用をコピー</span>
+                  </button>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    )
+  }
+</section>

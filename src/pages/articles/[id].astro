@@ -1,0 +1,248 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TableOfContents from '../../components/TableOfContents.astro';
+import ReferencesList from '../../components/ReferencesList.astro';
+
+export async function getStaticPaths() {
+  const articles = await getCollection('articles');
+  return articles.map((article) => ({
+    params: { id: article.id },
+    props: { article },
+  }));
+}
+
+const { article } = Astro.props;
+const { Content, headings } = await render(article);
+const { data } = article;
+
+// Automatically number the References section if body h2 headings use numbered prefixes (e.g. "7. ...")
+const h2Headings = headings.filter((h) => h.depth === 2);
+let nextSectionNumber: number | undefined;
+if (h2Headings.length > 0) {
+  const lastH2 = h2Headings[h2Headings.length - 1].text;
+  const match = lastH2.match(/^(\d+)\.\s*/);
+  if (match) {
+    nextSectionNumber = Number(match[1]) + 1;
+  }
+}
+
+const refTocLabel = nextSectionNumber
+  ? `${nextSectionNumber}. 参考文献（References）`
+  : '参考文献（References）';
+
+const tocHeadings = [
+  ...headings,
+  {
+    depth: 2,
+    slug: 'references',
+    text: refTocLabel,
+  },
+];
+---
+
+<BaseLayout
+  title={data.title}
+  description={data.summary}
+  currentPath={`/articles/${article.id}`}
+>
+  <div class="container">
+    <nav class="breadcrumb" aria-label="パンくずリスト">
+      <ol>
+        <li><a href="/">記事一覧</a></li>
+        <li><span>{data.categories[0]}</span></li>
+        <li aria-current="page"><span>{data.title}</span></li>
+      </ol>
+    </nav>
+
+    <header class="article-header">
+      {
+        data.status === 'template' && (
+          <div class="template-notice-banner" role="note">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <div>
+              <strong>レイアウト確認用モデル記事（一次文献の追記前）</strong>
+              このページは科学的妥当性を守るため、架空の文献や未検証の数値を一切含めず、一次文献の確認が必要な箇所をすべて「要一次文献確認」として構造化した枠組みです。一次文献・ガイドラインの参照情報を反映したうえで正式版へ更新してください。
+            </div>
+          </div>
+        )
+      }
+
+      <div class="article-categories-row">
+        {data.categories.map((cat) => <span class="category-badge">{cat}</span>)}
+        {
+          data.status === 'template' && (
+            <span class="status-badge-template">枠組み確認用</span>
+          )
+        }
+      </div>
+
+      <h1 class="article-title">{data.title}</h1>
+      {data.titleEn && <p class="article-title-en">{data.titleEn}</p>}
+
+      <div class="article-meta-grid">
+        <div class="meta-item">
+          <span class="meta-label">最終更新日</span>
+          <time class="meta-value mono" datetime={data.updatedAt}>
+            {data.updatedAt}
+          </time>
+        </div>
+
+        {
+          data.phase.length > 0 && (
+            <div class="meta-item">
+              <span class="meta-label">対象フェーズ</span>
+              <span class="meta-value">{data.phase.join(' ／ ')}</span>
+            </div>
+          )
+        }
+
+        {
+          data.guidelineYear && (
+            <div class="meta-item">
+              <span class="meta-label">参照ガイドライン年</span>
+              <span class="meta-value">{data.guidelineYear}</span>
+            </div>
+          )
+        }
+
+        {
+          data.evidenceTypes.length > 0 && (
+            <div class="meta-item">
+              <span class="meta-label">参照エビデンス種別</span>
+              <span class="meta-value">{data.evidenceTypes.join('・')}</span>
+            </div>
+          )
+        }
+      </div>
+
+      <div class="article-tags-row" aria-label="記事タイプタグ">
+        {data.tags.map((tag) => <span class="tag-chip">#{tag}</span>)}
+      </div>
+    </header>
+
+    <div class="article-layout">
+      <article class="article-main">
+        <TableOfContents headings={tocHeadings} variant="mobile" />
+
+        <div class="prose">
+          <Content />
+        </div>
+
+        <ReferencesList
+          references={data.references}
+          sectionNumber={nextSectionNumber}
+        />
+
+        <div class="article-bottom-nav">
+          <a href="/" class="back-link">
+            <span aria-hidden="true">&larr;</span> 記事一覧へ戻る
+          </a>
+          <a href="/policy" class="hero-policy-link">
+            編集方針・免責事項
+          </a>
+        </div>
+      </article>
+
+      <TableOfContents headings={tocHeadings} variant="desktop" />
+    </div>
+  </div>
+
+  <script>
+    // 1. Copy citation button handler (single and bulk)
+    async function copyToClipboard(text: string): Promise<boolean> {
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          // fall through to textarea fallback
+        }
+      }
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch {
+        return false;
+      }
+    }
+
+    const copyButtons = document.querySelectorAll<HTMLButtonElement>(
+      '.ref-copy-btn, #copy-all-refs-btn'
+    );
+    copyButtons.forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const text = btn.dataset.copyText || '';
+        if (!text) return;
+        const ok = await copyToClipboard(text);
+        if (!ok) return;
+
+        const labelEl = btn.querySelector('.btn-label');
+        const original = labelEl?.textContent || '';
+        btn.classList.add('is-copied');
+        if (labelEl) labelEl.textContent = 'コピーしました';
+
+        window.setTimeout(() => {
+          btn.classList.remove('is-copied');
+          if (labelEl) labelEl.textContent = original;
+        }, 1800);
+      });
+    });
+
+    // 2. Highlight target reference briefly when clicking inline [1] citation links
+    document.querySelectorAll<HTMLAnchorElement>('.cite-link').forEach((link) => {
+      link.addEventListener('click', () => {
+        const id = link.dataset.refId;
+        if (!id) return;
+        const target = document.getElementById(`ref-${id}`);
+        if (!target) return;
+        target.classList.add('is-highlighted');
+        window.setTimeout(() => target.classList.remove('is-highlighted'), 2200);
+      });
+    });
+
+    // 3. Desktop sticky TOC active-section scroll spy
+    const tocLinks = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>('#desktop-toc-list a[data-toc-target]')
+    );
+    if (tocLinks.length > 0 && 'IntersectionObserver' in window) {
+      const targetEls = tocLinks
+        .map((a) => document.getElementById(a.dataset.tocTarget || ''))
+        .filter((el): el is HTMLElement => Boolean(el));
+
+      const setActive = (slug: string) => {
+        tocLinks.forEach((a) => {
+          a.classList.toggle('is-active', a.dataset.tocTarget === slug);
+        });
+      };
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const visible = entries
+            .filter((e) => e.isIntersecting)
+            .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          if (visible.length > 0) {
+            setActive(visible[0].target.id);
+          }
+        },
+        {
+          rootMargin: '-88px 0px -70% 0px',
+          threshold: 0,
+        }
+      );
+
+      targetEls.forEach((el) => observer.observe(el));
+    }
+  </script>
+</BaseLayout>

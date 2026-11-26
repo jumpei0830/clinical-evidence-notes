@@ -1,0 +1,365 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_CONFIG } from '../config/site';
+
+const allArticles = (await getCollection('articles')).sort((a, b) =>
+  b.data.updatedAt.localeCompare(a.data.updatedAt)
+);
+
+// Build taxonomy lists preserving SITE_CONFIG order while also picking up any custom categories/tags in articles
+const categorySet = new Set<string>([...SITE_CONFIG.categories]);
+const tagSet = new Set<string>([...SITE_CONFIG.tags]);
+
+const categoryCounts = new Map<string, number>();
+const tagCounts = new Map<string, number>();
+
+for (const article of allArticles) {
+  for (const cat of article.data.categories) {
+    categorySet.add(cat);
+    categoryCounts.set(cat, (categoryCounts.get(cat) ?? 0) + 1);
+  }
+  for (const tag of article.data.tags) {
+    tagSet.add(tag);
+    tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+  }
+}
+
+const categories = Array.from(categorySet);
+const tags = Array.from(tagSet);
+
+function stripMarkdownForSearch(md: string): string {
+  return md
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[#*_`>|[\]()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const articleCards = allArticles.map((article) => {
+  const refText = article.data.references
+    .map((r) => `${r.citation} ${r.doi} ${r.pmid}`)
+    .join(' ');
+  const rawSearchText = [
+    article.data.title,
+    article.data.titleEn,
+    article.data.summary,
+    article.data.categories.join(' '),
+    article.data.tags.join(' '),
+    article.data.phase.join(' '),
+    article.data.evidenceTypes.join(' '),
+    stripMarkdownForSearch(article.body ?? ''),
+    refText,
+  ]
+    .join(' ')
+    .normalize('NFKC')
+    .toLowerCase();
+
+  return {
+    id: article.id,
+    data: article.data,
+    searchText: rawSearchText,
+  };
+});
+---
+
+<BaseLayout currentPath="/">
+  <section class="hero-section">
+    <div class="container">
+      <div class="hero-inner">
+        <p class="hero-eyebrow">Evidence-Based Clinical Reference</p>
+        <h1 class="hero-title">{SITE_CONFIG.name}</h1>
+        <p class="hero-description">{SITE_CONFIG.description}</p>
+        <div class="hero-policy-strip">
+          <span>{SITE_CONFIG.editorialNote}</span>
+          <a href="/policy" class="hero-policy-link">
+            編集方針・免責事項を読む
+            <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="catalog-section" aria-label="記事検索と一覧">
+    <div class="container">
+      <div class="filter-panel">
+        <div class="search-box-wrap">
+          <span class="search-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </span>
+          <input
+            id="article-search-input"
+            type="search"
+            class="search-input"
+            placeholder="キーワードで全文検索（例：心不全、白質病変、MoCA、実行機能）"
+            aria-label="記事をキーワードで全文検索"
+            autocomplete="off"
+          />
+          <button
+            type="button"
+            id="search-clear-btn"
+            class="search-clear-btn"
+            aria-label="検索キーワードをクリア"
+            hidden
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="filter-groups">
+          <div class="filter-group" role="group" aria-label="領域カテゴリで絞り込み">
+            <span class="filter-group-label">領域カテゴリ</span>
+            <div class="filter-chips" id="category-filters">
+              <button
+                type="button"
+                class="filter-btn"
+                data-filter-category="ALL"
+                aria-pressed="true"
+              >
+                すべて
+                <span class="filter-count">{allArticles.length}</span>
+              </button>
+              {
+                categories.map((cat) => (
+                  <button
+                    type="button"
+                    class="filter-btn"
+                    data-filter-category={cat}
+                    aria-pressed="false"
+                  >
+                    {cat}
+                    <span class="filter-count">{categoryCounts.get(cat) ?? 0}</span>
+                  </button>
+                ))
+              }
+            </div>
+          </div>
+
+          <div class="filter-group" role="group" aria-label="記事タイプタグで絞り込み">
+            <span class="filter-group-label">記事タイプ</span>
+            <div class="filter-chips" id="tag-filters">
+              {
+                tags.map((tag) => (
+                  <button
+                    type="button"
+                    class="filter-btn"
+                    data-filter-tag={tag}
+                    aria-pressed="false"
+                  >
+                    #{tag}
+                    <span class="filter-count">{tagCounts.get(tag) ?? 0}</span>
+                  </button>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-status-bar">
+        <p class="results-summary" id="results-summary" aria-live="polite">
+          全 <strong>{articleCards.length}</strong> 件中 <strong>{articleCards.length}</strong> 件を表示
+        </p>
+        <button type="button" id="reset-filters-btn" class="reset-filters-btn" hidden>
+          絞り込みをリセット
+        </button>
+      </div>
+
+      <div class="article-list" id="article-list">
+        {
+          articleCards.map((item) => (
+            <article
+              class="article-card"
+              data-categories={JSON.stringify(item.data.categories)}
+              data-tags={JSON.stringify(item.data.tags)}
+              data-search={item.searchText}
+            >
+              <div class="article-card-meta-top">
+                <div class="article-card-categories">
+                  {item.data.categories.map((cat) => (
+                    <span class="category-badge">{cat}</span>
+                  ))}
+                  {item.data.status === 'template' && (
+                    <span class="status-badge-template">枠組み確認用（一次文献追記前）</span>
+                  )}
+                </div>
+                <time class="article-card-date" datetime={item.data.updatedAt}>
+                  最終更新: {item.data.updatedAt}
+                </time>
+              </div>
+
+              <h2 class="article-card-title">
+                <a href={`/articles/${item.id}`}>{item.data.title}</a>
+              </h2>
+              {item.data.titleEn && (
+                <p class="article-card-title-en">{item.data.titleEn}</p>
+              )}
+
+              <p class="article-card-summary">{item.data.summary}</p>
+
+              <div class="article-card-footer">
+                <div class="article-card-tags">
+                  {item.data.tags.map((tag) => (
+                    <span class="tag-chip">#{tag}</span>
+                  ))}
+                </div>
+                <a href={`/articles/${item.id}`} class="article-card-readmore">
+                  記事を読む <span aria-hidden="true">&rarr;</span>
+                </a>
+              </div>
+            </article>
+          ))
+        }
+      </div>
+
+      <div class="empty-state" id="empty-state" hidden>
+        <h3>条件に一致する記事が見つかりませんでした</h3>
+        <p>キーワードを変更するか、領域カテゴリ・記事タイプの絞り込みを解除してお試しください。</p>
+        <button type="button" id="empty-reset-btn" class="reset-filters-btn">
+          すべての記事を表示する
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const searchInput = document.getElementById('article-search-input') as HTMLInputElement | null;
+    const clearBtn = document.getElementById('search-clear-btn') as HTMLButtonElement | null;
+    const resetBtn = document.getElementById('reset-filters-btn') as HTMLButtonElement | null;
+    const emptyResetBtn = document.getElementById('empty-reset-btn') as HTMLButtonElement | null;
+    const resultsSummary = document.getElementById('results-summary');
+    const emptyState = document.getElementById('empty-state');
+    const categoryButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('[data-filter-category]')
+    );
+    const tagButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('[data-filter-tag]')
+    );
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.article-card'));
+
+    const selectedCategories = new Set<string>();
+    const selectedTags = new Set<string>();
+
+    function updateFilterUI() {
+      const allBtn = categoryButtons.find((b) => b.dataset.filterCategory === 'ALL');
+      if (allBtn) {
+        allBtn.setAttribute('aria-pressed', selectedCategories.size === 0 ? 'true' : 'false');
+      }
+      categoryButtons.forEach((btn) => {
+        const val = btn.dataset.filterCategory;
+        if (val && val !== 'ALL') {
+          btn.setAttribute('aria-pressed', selectedCategories.has(val) ? 'true' : 'false');
+        }
+      });
+      tagButtons.forEach((btn) => {
+        const val = btn.dataset.filterTag;
+        if (val) {
+          btn.setAttribute('aria-pressed', selectedTags.has(val) ? 'true' : 'false');
+        }
+      });
+    }
+
+    function applyFilters() {
+      const rawQuery = (searchInput?.value ?? '').trim().normalize('NFKC').toLowerCase();
+      const queryTerms = rawQuery ? rawQuery.split(/\s+/).filter(Boolean) : [];
+
+      if (clearBtn) {
+        clearBtn.hidden = rawQuery.length === 0;
+      }
+
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const cardCategories: string[] = JSON.parse(card.dataset.categories || '[]');
+        const cardTags: string[] = JSON.parse(card.dataset.tags || '[]');
+        const cardSearch = card.dataset.search || '';
+
+        const matchesCategory =
+          selectedCategories.size === 0 ||
+          cardCategories.some((c) => selectedCategories.has(c));
+
+        const matchesTags =
+          selectedTags.size === 0 ||
+          Array.from(selectedTags).every((t) => cardTags.includes(t));
+
+        const matchesQuery =
+          queryTerms.length === 0 ||
+          queryTerms.every((term) => cardSearch.includes(term));
+
+        const visible = matchesCategory && matchesTags && matchesQuery;
+        card.hidden = !visible;
+        if (visible) visibleCount += 1;
+      });
+
+      const hasActiveFilter =
+        queryTerms.length > 0 || selectedCategories.size > 0 || selectedTags.size > 0;
+
+      if (resetBtn) {
+        resetBtn.hidden = !hasActiveFilter;
+      }
+
+      if (resultsSummary) {
+        resultsSummary.innerHTML = `全 <strong>${cards.length}</strong> 件中 <strong>${visibleCount}</strong> 件を表示`;
+      }
+
+      if (emptyState) {
+        emptyState.hidden = visibleCount > 0;
+      }
+    }
+
+    function resetAll() {
+      selectedCategories.clear();
+      selectedTags.clear();
+      if (searchInput) searchInput.value = '';
+      updateFilterUI();
+      applyFilters();
+    }
+
+    categoryButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.filterCategory;
+        if (!val) return;
+        if (val === 'ALL') {
+          selectedCategories.clear();
+        } else if (selectedCategories.has(val)) {
+          selectedCategories.delete(val);
+        } else {
+          selectedCategories.add(val);
+        }
+        updateFilterUI();
+        applyFilters();
+      });
+    });
+
+    tagButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.filterTag;
+        if (!val) return;
+        if (selectedTags.has(val)) {
+          selectedTags.delete(val);
+        } else {
+          selectedTags.add(val);
+        }
+        updateFilterUI();
+        applyFilters();
+      });
+    });
+
+    searchInput?.addEventListener('input', applyFilters);
+    clearBtn?.addEventListener('click', () => {
+      if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+      }
+      applyFilters();
+    });
+
+    resetBtn?.addEventListener('click', resetAll);
+    emptyResetBtn?.addEventListener('click', resetAll);
+  </script>
+</BaseLayout>
