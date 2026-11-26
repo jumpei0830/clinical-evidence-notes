@@ -1194,7 +1194,7 @@ a:hover {
   padding: 0;
 }
 
-/* Inline Vancouver Citation Links */
+/* Inline Citations (Author-Year & legacy numeric fallback) */
 .cite-sup {
   font-size: 0.74em;
   line-height: 0;
@@ -1213,6 +1213,23 @@ a:hover {
 .cite-link:hover {
   text-decoration: underline;
   color: var(--accent-hover);
+}
+
+.cite-author-link {
+  font-weight: 500;
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-decoration-color: rgba(27, 77, 62, 0.32);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.cite-author-link:hover {
+  color: var(--accent-hover);
+  background: var(--accent-soft);
+  text-decoration-color: var(--accent-primary);
 }
 
 /* Responsive Scrollable Clinical Tables */
@@ -1424,6 +1441,29 @@ a:hover {
   border-radius: var(--radius-md);
   scroll-margin-top: calc(var(--header-height) + 24px);
   transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.reference-item.is-author-year {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reference-key-row {
+  display: flex;
+  align-items: center;
+}
+
+.reference-key-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .reference-item:target,

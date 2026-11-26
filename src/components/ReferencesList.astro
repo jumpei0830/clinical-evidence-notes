@@ -1,6 +1,7 @@
 ---
 export interface ReferenceItem {
   id: number;
+  citeKey?: string;
   citation: string;
   doi?: string;
   pmid?: string;
@@ -14,13 +15,25 @@ interface Props {
 }
 
 const { references, sectionNumber } = Astro.props;
-const sortedRefs = [...references].sort((a, b) => a.id - b.id);
+const useAuthorYear = references.some((r) => Boolean(r.citeKey && r.citeKey.trim()));
+
+const sortedRefs = [...references].sort((a, b) => {
+  if (useAuthorYear) {
+    const keyA = (a.citeKey || a.citation).toLowerCase();
+    const keyB = (b.citeKey || b.citation).toLowerCase();
+    const cmp = keyA.localeCompare(keyB, 'en');
+    if (cmp !== 0) return cmp;
+  }
+  return a.id - b.id;
+});
+
 const headingText = sectionNumber
   ? `${sectionNumber}. 参考文献（References）`
   : '参考文献（References）';
 
 function formatCopyText(ref: ReferenceItem): string {
-  const parts = [`[${ref.id}] ${ref.citation}`];
+  const prefix = useAuthorYear ? '' : `[${ref.id}] `;
+  const parts = [`${prefix}${ref.citation}`];
   if (ref.doi) parts.push(`doi:${ref.doi}`);
   if (ref.pmid) parts.push(`PMID:${ref.pmid}`);
   if (!ref.doi && !ref.pmid && ref.url) parts.push(ref.url);
@@ -57,7 +70,7 @@ const allCopyText = sortedRefs.map((ref) => formatCopyText(ref)).join('\n');
         一次文献は現在整備中です（本文中の <span class="verify-badge">要一次文献確認</span> 箇所とあわせて確認後に追記されます）。
       </div>
     ) : (
-      <ol class="references-list">
+      <ol class={`references-list ${useAuthorYear ? 'is-author-year-list' : ''}`}>
         {sortedRefs.map((ref) => {
           const cleanDoi = ref.doi?.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '').trim() || '';
           const cleanPmid = ref.pmid?.replace(/^pmid:\s*/i, '').trim() || '';
@@ -66,8 +79,17 @@ const allCopyText = sortedRefs.map((ref) => formatCopyText(ref)).join('\n');
           const copyText = formatCopyText(ref);
 
           return (
-            <li id={`ref-${ref.id}`} class="reference-item">
-              <span class="reference-num">[{ref.id}]</span>
+            <li
+              id={`ref-${ref.id}`}
+              class={`reference-item ${useAuthorYear ? 'is-author-year' : ''}`}
+            >
+              {useAuthorYear ? (
+                <div class="reference-key-row">
+                  <span class="reference-key-badge">({ref.citeKey || ref.id})</span>
+                </div>
+              ) : (
+                <span class="reference-num">[{ref.id}]</span>
+              )}
               <div class="reference-body">
                 <p class="reference-citation">
                   {ref.citation}
@@ -128,7 +150,7 @@ const allCopyText = sortedRefs.map((ref) => formatCopyText(ref)).join('\n');
                     type="button"
                     class="ref-copy-btn"
                     data-copy-text={copyText}
-                    aria-label={`参考文献 ${ref.id} の引用テキストをコピー`}
+                    aria-label={`参考文献 ${ref.citeKey || ref.id} の引用テキストをコピー`}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />

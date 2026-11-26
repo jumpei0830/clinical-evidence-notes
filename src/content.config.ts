@@ -2,9 +2,11 @@ import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
 const referenceSchema = z.object({
-  /** 本文中の [1], [2] と 1対1 で対応する参照番号 */
+  /** アンカー用の参照ID（1からの連番） */
   id: z.number().int().positive(),
-  /** バンクーバー方式の書誌情報テキスト */
+  /** 本文中引用キー（著者-年方式。例: "Cannon et al., 2017" / "Davis & Allen, 2013"） */
+  citeKey: z.string().optional().default(''),
+  /** 書誌情報テキスト */
   citation: z.string().min(1),
   /** DOI（例: "10.1093/eurheartj/ehab368"）。未設定・未確認時は空文字または省略 */
   doi: z.string().optional().default(''),
